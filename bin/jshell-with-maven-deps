@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Run jshell with classpath including maven dependencies
+
+CLASSPATH_TXT_FILENAME=$(mktemp)
+
+mvn dependency:build-classpath \
+    -Dmdep.outputFile=${CLASSPATH_TXT_FILENAME} \
+    -DincludeTypes=jar
+
+trap "rm -rf "${CLASSPATH_FILENAME}"" EXIT INT TERM
+
+jshell --class-path `cat "${CLASSPATH_TXT_FILENAME}"`:target/classes:target/test-classes "$@"
