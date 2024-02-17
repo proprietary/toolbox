@@ -1,0 +1,18 @@
+#!/usr/bin/env zsh
+# Creates a ramdisk on macOS
+
+if [[ "$(uname)" != "Darwin" ]]; then
+    echo "This script is for macOS only." >&2
+    exit 1
+fi
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 <Gibibytes>"
+    exit 1
+fi
+
+NAME=$(cat /usr/share/dict/words | egrep -x '[a-z]{5,8}' | sort -R | head -n 2 | tr '\n' '_' | sed 's/_$//')
+RAM=$(python3 -c "print($1 * 1024 * 2048)")
+echo "Creating ramdisk of ${1}Gi at /Volumes/${NAME}..."
+diskutil apfs create $(hdiutil attach -nomount ram://$RAM) ${NAME} && \
+  touch /Volumes/${NAME}/.metadata_never_index
