@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Generates a random name similar to what Docker generates for unnamed containers
+
+cat /usr/share/dict/words | egrep -x '[a-z]{5,8}' | sort -R | head -n 2 | tr '\n' '_' | sed 's/_$//'
