@@ -42,41 +42,19 @@ git checkout "${GIT_REF}" && git pull
 ./configure \
     --prefix="${PREFIX}" \
     --with-ns \
-    --with-json \
-    --with-tree-sitter \
-    --with-native-compilation \
-    --with-imagemagick \
-    --with-mailutils \
-    CFLAGS="${CFLAGS}" \
-    LDFLAGS="${LDFLAGS}"
-
-gmake -j $(sysctl -n hw.ncpu)
-
-if [ -ne $? 0 ]; then
-  exit 1
-fi
-
-gmake install
-
-if [ -ne $? 0 ]; then
-  exit 1
-fi
-
-cp -r nextstep/Emacs.app /Applications/
-
-# Build without a native Cocoa application
-
-gmake clean
-
-./configure \
-    --prefix="${PREFIX}" \
     --disable-ns-self-contained \
     --with-json \
     --with-tree-sitter \
-    --with-native-compilation \
+    --with-native-compilation=aot \
     --with-imagemagick \
     --with-mailutils \
     CFLAGS="${CFLAGS}" \
     LDFLAGS="${LDFLAGS}"
 
-gmake -j $(sysctl -n hw.ncpu) && sudo gmake install
+if [ -ne $? 0 ]; then
+  exit 1
+fi
+
+gmake -j $(sysctl -n hw.ncpu) && \
+    sudo gmake install && \
+    cp -r nextstep/Emacs.app /Applications/
