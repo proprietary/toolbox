@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+PYRIGHT_DIR=$HOME/git/com/github/microsoft/pyright
+
+if ! command -v node &> /dev/null; then
+    echo "Node.js not installed" >&2;
+    exit 1
+fi
+
+if [ ! -d ${PYRIGHT_DIR} ]; then
+    mkdir -p ${PYRIGHT_DIR} && \
+        cd ${PYRIGHT_DIR} && \
+        git clone https://github.com/microsoft/pyright.git . && \
+        pnpm install:all && \
+        cd packages/pyright && \
+        pnpm build
+fi
+
+node ${PYRIGHT_DIR}/packages/pyright/dist/pyright-langserver.js "$@"
