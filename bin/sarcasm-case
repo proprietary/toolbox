@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+"""
+Sarcasm case
+------------
+
+Sarcasm case is a form of text manipulation where the goal is to make
+a given text appear sarcastic. To do this, the case of each letter in
+the text is randomly chosen. For example, the sentence "I am not
+sarcastic" would become "i aM NoT SaRcAsTiC".
+
+This program reads a string from the standard input and outputs it in
+"sarcasm case" to the standard output.
+
+"""
+
+import sys
+import random
+
+if __name__ == '__main__':
+    text = sys.stdin.read().strip()
+    result = ''
+    for i, c in enumerate(text):
+        if random.choice([True, False]):
+            result += c.lower()
+        else:
+            result += c.upper()
+    print(result)
