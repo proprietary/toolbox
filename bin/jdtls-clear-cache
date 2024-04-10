@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# Deletes cache directories that the Eclipse Java Language Server uses
+
+find /private/var/ -type d -name 'jdtls-*' -delete
