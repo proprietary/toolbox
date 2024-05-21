@@ -1,0 +1,19 @@
+# This assumes you have nginx-ingress installed. See: https://kubernetes.github.io/ingress-nginx/
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opengrok-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  # N.B.: Set up an internal DNS (e.g., dnsmasq, unbound) that resolves this host
+  - host: opengrok.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: opengrok
+            port:
+              number: 80

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opengrok
+  labels:
+    app: opengrok
+spec:
+  selector:
+    matchLabels:
+      app: opengrok
+  replicas: 1
+  minReadySeconds: 15
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+  template:
+    metadata:
+      labels:
+        app: opengrok
+    spec:
+      containers:
+      - name: opengrok
+        image: opengrok/docker:1.13
+        ports:
+        - containerPort: 8080
+        env:
+        - name: CHECK_INDEX
+          value: "1"
+        - name: SYNC_PERIOD_MINUTES
+          value: "240"
+        - name: NOMIRROR
+          value: "1"
+        volumeMounts:
+        - name: src
+          mountPath: /opengrok/src
+        - name: data
+          mountPath: /opengrok/data
+        - name: etc
+          mountPath: /opengrok/etc
+      volumes:
+      - name: src
+        persistentVolumeClaim:
+          claimName: opengrok-src-data-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+  - metadata:
+      name: etc
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi

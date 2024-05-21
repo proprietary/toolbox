@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opengrok-src-data-pvc
+  labels:
+    app: opengrok
+spec:
+  volumeName: opengrok-src-data-pv
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: opengrok-src-data-pv
+  labels:
+    app: opengrok
+    type: local
+##############################################################
+# CHANGE THIS TO POINT TO THE RIGHT DIR FOR YOUR CODEBASE!!! #
+##############################################################
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: /home/zds/src
+    type: Directory
+  storageClassName: manual
+---
