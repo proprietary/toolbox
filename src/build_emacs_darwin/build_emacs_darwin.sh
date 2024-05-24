@@ -4,8 +4,7 @@
 # Pre-requisites:
 # 1. Install Xcode from the App Store
 # 2. Install Xcode command line tools
-# 3. Install Homebrew (or MacPorts or Nix, but you're on your own there)
-# 4. Install dependencies:
+# 3. Install these Homebrew packages (or MacPorts or Nix, but you're on your own there)
 #      brew install \
 #        autoconf \
 #        automake \
@@ -13,23 +12,31 @@
 #        texinfo \
 #        pkg-config \
 #        gnutls \
-#        gcc@13 \
+#        gcc \
 #        imagemagick \
 #        mailutils \
 #        libgccjit \
 #        jansson \
-#        gnutls \
 #        tree-sitter
 
 GIT_REF="master"
 PREFIX="/usr/local"
-CFLAGS="-O3 -march=native -I/opt/local/include/gcc13"
-LDFLAGS="-L/opt/local/lib/gcc13 \
-	-Wl,-rpath,/opt/local/lib/gcc13"
-
+PKG_ROOT=$(brew --prefix)
+CFLAGS="-O3 -march=native -I${PKG_ROOT}/include"
+LDFLAGS="-L${PKG_ROOT}/lib/gcc/current -L${PKG_ROOT}/lib -Wl,-rpath,${PKG_ROOT}/lib/gcc/current"
 THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 set -e
+
+cc libgccjit_smoketest.c $CFLAGS $LDFLAGS -lgccjit -o libgccjit_smoketest
+./libgccjit_smoketest
+if [[ $? -ne 0 ]]; then
+    cat <<EOF
+Failed to compile and run an example program using libgccjit.
+Please make sure you installed libgccjit with Homebrew and this script has the right paths"
+EOF
+    exit 1
+fi
 
 if [[ $# -eq 0 ]]; then
     echo "Usage: $0 [--with-ns|--without-ns]"
@@ -37,16 +44,16 @@ if [[ $# -eq 0 ]]; then
 fi
 
 function parse_arguments() {
-    WITH_NS=false
+    WITH_NS=0
     while [[ $# -gt 0 ]]; do
         key="$1"
         case "$key" in
             --with-ns)
-                WITH_NS=true
+                WITH_NS=1
                 shift
                 ;;
             --without-ns)
-                WITH_NS=false
+                WITH_NS=0
                 shift
                 ;;
             *)
@@ -58,7 +65,11 @@ function parse_arguments() {
 }
 
 parse_arguments "$@"
-echo "Building as a NS app: $WITH_NS…"
+if [[ ${WITH_NS} -eq 1 ]]; then
+    echo "Building as a NS app"
+else
+    echo "Building as a non-NS app"
+fi
 
 if [ ! -d "$THIS_DIR/emacs" ]; then
     git clone git://git.savannah.gnu.org/emacs.git
@@ -73,14 +84,15 @@ git clean -fxd && \
 
 ./autogen.sh
 
-if [[ "${WITH_NS}" == "false" ]]; then
+if [[ "${WITH_NS}" -eq 1 ]]; then
     ./configure \
         --with-ns \
         --with-json \
         --with-tree-sitter \
-        --with-native-compilation=aot \
+        --with-native-compilation \
         --with-imagemagick \
         --with-mailutils \
+        --with-xpm=ifavailable \
         CFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}"
 
@@ -92,11 +104,12 @@ else
     ./configure \
         --prefix="${PREFIX}" \
         --without-ns \
+        --with-x-toolkit=no \
         --with-json \
         --with-tree-sitter \
-        --with-native-compilation=aot \
-        --with-imagemagick \
+        --with-native-compilation \
         --with-mailutils \
+        --with-xpm=ifavailable \
         CFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}"
 
