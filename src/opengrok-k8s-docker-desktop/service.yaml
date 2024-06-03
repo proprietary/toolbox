@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: opengrok
+  labels:
+    app: opengrok
+spec:
+  ports:
+  - name: web
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - # For the route <host>:5000/reindex
+    name: reindex
+    port: 5000
+    targetPort: 5000
+    protocol: TCP
+  selector:
+    app: opengrok

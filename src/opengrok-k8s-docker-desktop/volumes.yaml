@@ -1,0 +1,85 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: docker.io/hostpath
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: opengrok-src-pv
+  labels:
+    app: opengrok
+    type: local
+spec:
+  capacity:
+    # May need to change this depending on how large of a codebase you have
+    storage: 100Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    ####################################################################
+    # Edit this! Put the absolute path of the directory with your code #
+    ####################################################################
+    path: {{ YOUR_CODE_DIR_HERE }}
+    type: Directory
+  storageClassName: local-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opengrok-src-pvc
+  labels:
+    app: opengrok
+spec:
+  volumeName: opengrok-src-pv
+  storageClassName: local-storage
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      # May need to change this depending on how large of a codebase you have
+      storage: 200Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: opengrok-data-pv
+  labels:
+    app: opengrok
+    type: local
+spec:
+  capacity:
+    # May need to change this depending on how large of a codebase you have
+    storage: 100Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    #####################################################################
+    # Edit this! Put the absolute path of the directory where you want  #
+    # to store the index. For example, I use `/var/opengrok-data`. Make #
+    # sure the directory exists on your host machine.                   #
+    #####################################################################
+    path: {{ YOUR_DATA_DIR_PATH }}
+    type: Directory
+  storageClassName: local-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opengrok-data-pvc
+  labels:
+    app: opengrok
+spec:
+  volumeName: opengrok-data-pv
+  storageClassName: local-storage
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      # May need to change this depending on how large of a codebase you have
+      storage: 100Gi
+---

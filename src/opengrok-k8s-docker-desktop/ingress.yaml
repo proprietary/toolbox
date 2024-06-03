@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opengrok-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: opengrok.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: opengrok
+            port:
+              name: web
+      - path: /reindex
+        pathType: Prefix
+        backend:
+          service:
+            name: opengrok
+            port:
+              name: reindex
