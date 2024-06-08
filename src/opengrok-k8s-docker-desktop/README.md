@@ -7,16 +7,27 @@ on your local machine, specifically using Docker Desktop on macOS.
 Docker Desktop has an integrated Kubernetes cluster that works very
 well with minimal fuss.
 
-# Usage
+# Setup
 
-[Install ingress-nginx](https://kubernetes.github.io/ingress-nginx/deploy/#quick-start) on your Kubernetes cluster.
+This is the easiest path to get started
 
-Edit the file `volumes.yaml` and replace the `hostPath.path` fields with absolute paths to directories on your machine.
+[Install Docker Desktop](https://www.docker.com/products/docker-desktop/) and [enable Kubernetes](https://docs.docker.com/desktop/kubernetes/)
 
-Then `cd` into this directory and
+[Install kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+[Install skaffold](https://skaffold.dev/)
+
+[Install ingress-nginx](https://kubernetes.github.io/ingress-nginx/deploy/#quick-start) on your Kubernetes cluster
+
+Edit the file [`k8s/volumes.yaml`](k8s/volumes.yaml) and replace the `hostPath.path` fields with absolute paths to directories on your machine.
+
+Then run:
 
 ```bash
-kubectl apply -f .
+git clone --recurse-submodules https://github.com/proprietary/toolbox.git
+cd toolbox/src/opengrok-k8s-docker-desktop
+kubectl create namespace opengrok
+skaffold run
 ```
 
 ## Making `http://opengrok.test` work

@@ -1,0 +1,3 @@
+[submodule "src/opengrok-k8s-docker-desktop/opengrok"]
+	path = src/opengrok-k8s-docker-desktop/opengrok
+	url = https://github.com/oracle/opengrok.git

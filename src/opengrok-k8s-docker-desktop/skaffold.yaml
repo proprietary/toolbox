@@ -1,0 +1,21 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: opengrok
+build:
+  artifacts:
+  - image: opengrok
+    context: ./opengrok
+    hooks:
+      before:
+      - dir: ./opengrok
+        command:
+        - sh
+        - -c
+        - "git submodule update --init --recursive && cd opengrok && git pull --ff-only"
+manifests:
+  rawYaml:
+  - ./k8s/*.yaml
+deploy:
+  kubectl:
+    defaultNamespace: opengrok
