@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Get Cloudflare IP ranges as a comma-separated list
+
+ipv4s=$(curl -s 'https://www.cloudflare.com/ips-v4/' | tr '\n' ',' | sed 's/,$//')
+ipv6s=$(curl -s 'https://www.cloudflare.com/ips-v6/' | tr '\n' ',' | sed 's/,$//')
+
+echo -n "${ipv4s},${ipv6s}"
