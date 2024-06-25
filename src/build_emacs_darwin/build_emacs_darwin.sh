@@ -17,16 +17,33 @@
 #        mailutils \
 #        libgccjit \
 #        jansson \
-#        tree-sitter
+#        tree-sitter \
+#        coreutils \
+#        make
+
+xcode-select --install
+brew install \
+  autoconf \
+  automake \
+  libtool \
+  texinfo \
+  pkg-config \
+  gnutls \
+  gcc \
+  imagemagick \
+  mailutils \
+  libgccjit \
+  jansson \
+  tree-sitter \
+  coreutils \
+  make
 
 GIT_REF="master"
 PREFIX="/usr/local"
 PKG_ROOT=$(brew --prefix)
 CFLAGS="-O3 -march=native -I${PKG_ROOT}/include"
 LDFLAGS="-L${PKG_ROOT}/lib/gcc/current -L${PKG_ROOT}/lib -Wl,-rpath,${PKG_ROOT}/lib/gcc/current"
-THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-set -e
+THIS_DIR="$( cd "$(dirname "$0")"; pwd )"
 
 cc libgccjit_smoketest.c $CFLAGS $LDFLAGS -lgccjit -o libgccjit_smoketest
 ./libgccjit_smoketest
@@ -38,81 +55,43 @@ EOF
     exit 1
 fi
 
-if [[ $# -eq 0 ]]; then
-    echo "Usage: $0 [--with-ns|--without-ns]"
-    exit 1
-fi
-
-function parse_arguments() {
-    WITH_NS=0
-    while [[ $# -gt 0 ]]; do
-        key="$1"
-        case "$key" in
-            --with-ns)
-                WITH_NS=1
-                shift
-                ;;
-            --without-ns)
-                WITH_NS=0
-                shift
-                ;;
-            *)
-                echo "Unknown argument: $key"
-                exit 1
-                ;;
-        esac
-    done
-}
-
-parse_arguments "$@"
-if [[ ${WITH_NS} -eq 1 ]]; then
-    echo "Building as a NS app"
-else
-    echo "Building as a non-NS app"
-fi
-
 if [ ! -d "$THIS_DIR/emacs" ]; then
     git clone git://git.savannah.gnu.org/emacs.git
 fi
 
 cd "$THIS_DIR/emacs"
 
-git clean -fxd && \
-  git reset --hard && \
-  git checkout "${GIT_REF}" && \
-  git pull
+function build() {
+    local with_ns=$1
+    local configure_flags="--with-json --with-tree-sitter --with-native-compilation --with-imagemagick --with-mailutils --with-x-toolkit=no --with-xpm=ifavailable"
 
-./autogen.sh
+    git clean -fxd && \
+    git reset --hard && \
+    git checkout "${GIT_REF}" && \
+    git pull
 
-if [[ "${WITH_NS}" -eq 1 ]]; then
+    ./autogen.sh
+
+    if [[ "${with_ns}" == "with_ns" ]]; then
+        configure_flags="--with-ns ${configure_flags}"
+    else
+        # Build non-NS version for the terminal
+        configure_flags="--prefix="${PREFIX}" --without-ns ${configure_flags}"
+    fi
+
     ./configure \
-        --with-ns \
-        --with-json \
-        --with-tree-sitter \
-        --with-native-compilation \
-        --with-imagemagick \
-        --with-mailutils \
-        --with-xpm=ifavailable \
-        CFLAGS="${CFLAGS}" \
-        LDFLAGS="${LDFLAGS}"
+        ${configure_flags} \
+        CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}"
 
-    gmake -j $(sysctl -n hw.ncpu) && \
-    gmake install && \
-    cp -r nextstep/Emacs.app /Applications/
-else
-    # Build non-NS version for the terminal
-    ./configure \
-        --prefix="${PREFIX}" \
-        --without-ns \
-        --with-x-toolkit=no \
-        --with-json \
-        --with-tree-sitter \
-        --with-native-compilation \
-        --with-mailutils \
-        --with-xpm=ifavailable \
-        CFLAGS="${CFLAGS}" \
-        LDFLAGS="${LDFLAGS}"
+    gmake -j $(sysctl -n hw.ncpu)
 
-    gmake -j $(sysctl -n hw.ncpu) && \
-        sudo gmake install
-fi
+    if [[ "${with_ns}" == "with_ns" ]]; then
+         gmake install
+         cp -r nextstep/Emacs.app /Applications/
+    else
+         sudo gmake install
+    fi
+}
+
+build with_ns
+build without_ns
