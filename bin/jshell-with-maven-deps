@@ -9,4 +9,4 @@ mvn dependency:build-classpath \
 
 trap "rm -rf "${CLASSPATH_FILENAME}"" EXIT INT TERM
 
-jshell --class-path `cat "${CLASSPATH_TXT_FILENAME}"`:target/classes:target/test-classes "$@"
+jshell --class-path $(cat "${CLASSPATH_TXT_FILENAME}"):target/classes:target/test-classes "$@"
