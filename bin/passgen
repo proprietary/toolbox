@@ -1,0 +1,16 @@
+#!/usr/bin/env zsh
+
+OS=$(uname -s)
+GNU_TR_COMMAND=
+LENGTH=${1-40}
+
+if [ "${OS}" = "Linux" ]; then
+    GNU_TR_COMMAND=tr
+elif [ ${OS} = "Darwin" ]; then
+    GNU_TR_COMMAND=gtr
+else
+    echo "Could not locate GNU tr"
+    exit 1
+fi
+
+</dev/urandom $GNU_TR_COMMAND -dc 'A-Za-z0-9$!.;,%^&*()@' | head -c ${LENGTH} && echo
