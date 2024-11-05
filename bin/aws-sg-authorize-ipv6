@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# This adds an ingress rule for your current IPv6 address to an EC2
+# Security Group. Set SECURITY_GROUP_ID as an environment variable
+# before running this script. The security group rule has the
+# description "My IP", which you can change by setting.
+#
+# Usage:
+#
+# SECURITY_GROUP_ID=sg-0123456789 DESCRIPTION="My IPv6" ./authorize_ipv6
+#
+
+if [ -z "$SECURITY_GROUP_ID" ]; then
+    echo -e "$(cat <<EOF
+\e[0;31mSet SECURITY_GROUP_ID before running this script\e[0m
+
+Example:
+
+    SECURITY_GROUP_ID="sg-0010293938" $0
+EOF
+)" >&2
+    exit 1
+fi
+
+DESCRIPTION=${DESCRIPTION:-"My IPv6"}
+
+function find_ipv6_address() {
+    dig -6 TXT +short o-o.myaddr.l.google.com @ns1.google.com | awk -F'"' '{print $2}'
+}
+
+
+NEW_IPV6_ADDRESS=${NEW_IPV6_ADDRESS:-$(find_ipv6_address)}
+
+if [ -z "$NEW_IPV6_ADDRESS" ]; then
+    echo -e "\e[0;31mFailed to discover your IPv6 address\e[0m (got \"$NEW_IPV6_ADDRESS\")" >&2
+    exit 1
+fi
+
+RULE_TO_REVOKE=$(aws ec2 describe-security-group-rules --filters Name="group-id",Values="$SECURITY_GROUP_ID" \
+                     | jq -r --arg desc "$DESCRIPTION" '
+                       .SecurityGroupRules[]
+                       | select(.Description == $desc)
+                       | .SecurityGroupRuleId')
+
+if [ $? -ne 0 ]; then
+    echo -e "\e[0;31mFailed to list security group rules under id $SECURITY_GROUP_ID\e[0m"
+    exit 1
+fi
+
+if [ -z "$RULE_TO_REVOKE" ]; then
+    echo -e "\e[0;33mNo rule found with description:\e[0m $DESCRIPTION" >&2
+else
+    echo "Revoking existing rule with description: $DESCRIPTION..." >&2
+    aws ec2 revoke-security-group-ingress \
+        --group-id "$SECURITY_GROUP_ID" \
+        --security-group-rule-ids "$RULE_TO_REVOKE"
+    if [ $? -ne 0 ]; then
+        echo -e "\e[0;31mFailed to revoke existing rule with Security Group Rule ID $RULE_TO_REVOKE\e[0m" >&2
+        exit 1
+    fi
+fi
+
+echo "Authorizing new rule to allow all traffic from $NEW_IPV6_ADDRESS with description: $DESCRIPTION" >&2
+
+aws ec2 authorize-security-group-ingress \
+    --group-id "$SECURITY_GROUP_ID" \
+    --ip-permissions '[
+        {
+            "IpProtocol": "-1",
+            "Ipv6Ranges": [
+                {
+                    "CidrIpv6": "'"$NEW_IPV6_ADDRESS"'/128",
+                    "Description": "'"$DESCRIPTION"'"
+                }
+            ]
+        }
+    ]'
+
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
+echo -e "\e[0;32mSecurity group rule has been successfully replaced.\e[0m" >&2
