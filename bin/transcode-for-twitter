@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+# See: https://developer.x.com/en/docs/x-api/v1/media/upload-media/uploading-media/media-best-practices
+
+ffmpeg -c:v libx264 -profile:v high -crf 23 -c:a aac -b:a 128k -profile:a aac_low "$@"
