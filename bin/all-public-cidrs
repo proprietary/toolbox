@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+
+import ipaddress
+import argparse
+
+EXCLUDED_IPV4 = [
+    "0.0.0.0/8",  # "This" network
+    "10.0.0.0/8",  # RFC1918
+    "100.64.0.0/10",  # Carrier-grade NAT
+    "127.0.0.0/8",  # Loopback
+    "169.254.0.0/16",  # Link-local
+    "172.16.0.0/12",  # RFC1918
+    "192.0.0.0/24",  # IETF protocol assignments
+    "192.0.2.0/24",  # TEST-NET-1
+    "192.168.0.0/16",  # RFC1918
+    "198.18.0.0/15",  # Benchmarking
+    "198.51.100.0/24",  # TEST-NET-2
+    "203.0.113.0/24",  # TEST-NET-3
+    "224.0.0.0/4",  # Multicast
+    "240.0.0.0/4",  # Future/reserved
+    "255.255.255.255/32",
+]
+
+EXCLUDED_IPV6 = [
+    "::1/128",  # Loopback
+    "fc00::/7",  # Unique local (ULA)
+    "fe80::/10",  # Link-local
+    "ff00::/8",  # Multicast
+    "fec0::/10",  # Site-local (deprecated)
+    "2001:db8::/32",  # Documentation
+]
+
+
+def network_to_range(net):
+    """
+    Convert an ipaddress.ip_network object into a tuple (start_int, end_int).
+    """
+    return (int(net.network_address), int(net.broadcast_address))
+
+
+def subtract_range(base_range, exclude_range):
+    """
+    Subtract 'exclude_range' from 'base_range' (both are (start, end) int tuples)
+    and return a list of leftover (start, end) ranges (0, 1, or 2 ranges).
+    """
+    bstart, bend = base_range
+    estart, eend = exclude_range
+
+    # If there's no overlap, keep the base range as is.
+    if eend < bstart or estart > bend:
+        return [base_range]
+
+    leftovers = []
+    # Left side leftover
+    if estart > bstart:
+        leftovers.append((bstart, estart - 1))
+    # Right side leftover
+    if eend < bend:
+        leftovers.append((eend + 1, bend))
+
+    return leftovers
+
+
+def range_to_networks(range_tuple, version=4):
+    """
+    Convert an integer (start, end) range back into a list of ipaddress.ip_network
+    objects using ipaddress.summarize_address_range().
+    """
+    start_int, end_int = range_tuple
+    if version == 4:
+        start_ip = ipaddress.IPv4Address(start_int)
+        end_ip = ipaddress.IPv4Address(end_int)
+    else:
+        start_ip = ipaddress.IPv6Address(start_int)
+        end_ip = ipaddress.IPv6Address(end_int)
+
+    return list(ipaddress.summarize_address_range(start_ip, end_ip))
+
+
+def subtract_cidrs(base_cidr, exclude_list):
+    """
+    Given a base CIDR and a list of CIDRs to exclude, return a *minimal*
+    list of ipaddress.ip_network objects representing the leftover space.
+    """
+    base_net = ipaddress.ip_network(base_cidr, strict=False)
+    version = base_net.version
+
+    # Start with a single (start_int, end_int) range for the entire base_net.
+    remaining_ranges = [network_to_range(base_net)]
+
+    # Subtract each exclude network from the list of remaining ranges.
+    for exc_str in exclude_list:
+        exc_net = ipaddress.ip_network(exc_str, strict=False)
+        exc_range = network_to_range(exc_net)
+        new_remaining = []
+        for rng in remaining_ranges:
+            new_remaining.extend(subtract_range(rng, exc_range))
+        remaining_ranges = new_remaining
+
+    # Convert the leftover integer ranges back into ip_network objects.
+    leftover_networks = []
+    for rng in remaining_ranges:
+        leftover_networks.extend(range_to_networks(rng, version=version))
+
+    # Merge adjacent or overlapping networks into the smallest possible set.
+    leftover_networks = list(ipaddress.collapse_addresses(leftover_networks))
+
+    return leftover_networks
+
+
+# -------------------------------------------------------------------------
+# Main routines to generate "all public" IPv4 and IPv6.
+# -------------------------------------------------------------------------
+
+
+def generate_ipv4_public(additional_exclusions=[]):
+    """
+    Return the minimal set of ipaddress.ip_network objects covering 0.0.0.0/0
+    minus all well-known private & reserved IPv4 space.
+    """
+    base = "0.0.0.0/0"
+    exclusions = EXCLUDED_IPV4 + additional_exclusions
+    return subtract_cidrs(base, exclusions)
+
+
+def generate_ipv6_public(additional_exclusions=[]):
+    """
+    Return the minimal set of ipaddress.ip_network objects covering ::/0
+    minus well-known private & special IPv6 space.
+    """
+    base = "::/0"
+    exclusions = EXCLUDED_IPV6 + additional_exclusions
+    return subtract_cidrs(base, exclusions)
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description="Generate all public IPv4 and IPv6 CIDRs")
+    ap.add_argument(
+        "--exclude-ipv4",
+        nargs="+",
+        help="Additional IPv4 CIDRs to exclude",
+        default=[],
+        type=str,
+        required=False,
+    )
+    ap.add_argument(
+        "--exclude-ipv6",
+        nargs="+",
+        help="Additional IPv6 CIDRs to exclude",
+        default=[],
+        type=str,
+        required=False,
+    )
+    args = ap.parse_args()
+    ipv4_public = generate_ipv4_public(args.exclude_ipv4)
+    for net in ipv4_public:
+        print(net)
+
+    ipv6_public = generate_ipv6_public(args.exclude_ipv6)
+    for net in ipv6_public:
+        print(net)

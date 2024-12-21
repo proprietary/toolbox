@@ -63,7 +63,7 @@ cd "$THIS_DIR/emacs"
 
 function build() {
     local with_ns=$1
-    local configure_flags="--with-json --with-tree-sitter --with-native-compilation --with-imagemagick --with-mailutils --with-x-toolkit=no --with-xpm=ifavailable"
+    local configure_flags="--with-tree-sitter --with-native-compilation --with-imagemagick --with-mailutils --with-x-toolkit=no --with-xpm=ifavailable --with-gnu-tls"
 
     git clean -fxd && \
     git reset --hard && \
